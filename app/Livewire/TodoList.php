@@ -2,28 +2,54 @@
 
 namespace App\Livewire;
 
-use App\Models\User;
+use App\Models\Task;
 use Livewire\Component;
 
 class TodoList extends Component
 {
+    public $tasks = [];
+    public $newTask = '';
 
-    public function createNewUser() {
-        User::create([
-            'name' => "test user",
-            'email' => "test@test.com",
-            'password' => '1234567890'
+    // Load tasks from the database
+    public function mount()
+    {
+        $this->tasks = Task::all()->toArray(); // Load tasks from DB
+    }
+
+    // Add a task to the database
+    public function addTask()
+    {
+        if (trim($this->newTask) === '') return;
+
+        $task = Task::create([
+            'title' => $this->newTask,
+            'completed' => false,
         ]);
+
+        // Add to the tasks array for the UI update
+        $this->tasks[] = $task->toArray();
+        $this->newTask = '';
+    }
+
+    // Delete a task from the database
+    public function deleteTask($id)
+    {
+        Task::find($id)->delete();
+        $this->tasks = Task::all()->toArray(); // Reload tasks from DB
+    }
+
+    // Toggle task completion in the database
+    public function toggleCompleted($id)
+    {
+        $task = Task::find($id);
+        $task->completed = !$task->completed;
+        $task->save();
+
+        $this->tasks = Task::all()->toArray(); // Reload tasks
     }
 
     public function render()
     {
-        $title = "This is a string.";
-        $users = User::all();
-
-        return view('livewire.todo-list',[
-            'title' => $title,
-            'users' => $users
-        ]);
+        return view('livewire.todo-list');
     }
 }
