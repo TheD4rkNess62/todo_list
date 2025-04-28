@@ -7,49 +7,73 @@ use Livewire\Component;
 
 class TodoList extends Component
 {
-    public $tasks = [];
     public $newTask = '';
+    public $dueDate = '';
+    public $priority = 'low'; // Default priority
 
-    // Load tasks from the database
-    public function mount()
-    {
-        $this->tasks = Task::all()->toArray(); // Load tasks from DB
-    }
+    public $editingTaskId = null;
+    public $taskBeingEdited = '';
 
     // Add a task to the database
     public function addTask()
     {
         if (trim($this->newTask) === '') return;
 
-        $task = Task::create([
+        Task::create([
             'title' => $this->newTask,
             'completed' => false,
+            'due_date' => $this->dueDate ?: null,
+            'priority' => $this->priority ?: 'low',
         ]);
 
-        // Add to the tasks array for the UI update
-        $this->tasks[] = $task->toArray();
+        // Reset input fields
         $this->newTask = '';
+        $this->dueDate = '';
+        $this->priority = 'low';
     }
 
-    // Delete a task from the database
+    // Delete task from database
     public function deleteTask($id)
     {
-        Task::find($id)->delete();
-        $this->tasks = Task::all()->toArray(); // Reload tasks from DB
+        Task::find($id)?->delete();
+    }
+
+    // Start editing a task
+    public function startEditing($id)
+    {
+        $task = Task::find($id);
+        $this->editingTaskId = $id;
+        $this->taskBeingEdited = $task->title;
+    }
+
+    // Save edited task
+    public function saveTask()
+    {
+        $task = Task::find($this->editingTaskId);
+        if ($task) {
+            $task->title = $this->taskBeingEdited;
+            $task->save();
+        }
+
+        $this->editingTaskId = null;
+        $this->taskBeingEdited = '';
     }
 
     // Toggle task completion in the database
     public function toggleCompleted($id)
     {
         $task = Task::find($id);
-        $task->completed = !$task->completed;
-        $task->save();
-
-        $this->tasks = Task::all()->toArray(); // Reload tasks
+        if ($task) {
+            $task->completed = !$task->completed;
+            $task->save();
+        }
     }
 
+    // Render the component view with live tasks from DB
     public function render()
     {
-        return view('livewire.todo-list');
+        return view('livewire.todo-list', [
+            'tasks' => Task::orderByDesc('created_at')->get()
+        ]);
     }
 }
